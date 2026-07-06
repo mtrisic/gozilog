@@ -1,0 +1,39 @@
+{
+  "name": "gozilog Dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "installOhMyZsh": true,
+      "installOhMyZshConfig": true,
+      "configureZshAsDefaultShell": true,
+      "username": "vscode"
+    }
+  },
+  "mounts": [
+    "source=devcontainer-zsh-history,target=/commandhistory,type=volume"
+  ],
+  "remoteUser": "vscode",
+  "postCreateCommand": "bash .devcontainer/post_create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "mborik.z80-macroasm",
+        "maziac.z80-instruction-set",
+        "ms-vscode.hexeditor"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "go.toolsManagement.autoUpdate": true,
+        "files.associations": {
+          "*.asm": "z80-macroasm",
+          "*.inc": "z80-macroasm"
+        }
+      }
+    }
+  }
+}

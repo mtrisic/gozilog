@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>gozilog — Z80 in the browser</title>
+<style>
+  body { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+         background: #14161a; color: #d8dee9; max-width: 900px;
+         margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; } h1 small { color: #7a828e; font-weight: normal; }
+  .panels { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  fieldset { border: 1px solid #3b4252; border-radius: 6px; padding: .8rem 1rem; }
+  legend { color: #7a828e; padding: 0 .4rem; }
+  table td { padding: .1rem .7rem .1rem 0; }
+  td.v { color: #88c0d0; }
+  pre { margin: 0; line-height: 1.5; }
+  .pc { background: #88c0d0; color: #14161a; }
+  button { font: inherit; background: #2e3440; color: #d8dee9;
+           border: 1px solid #4c566a; border-radius: 4px;
+           padding: .35rem .9rem; margin-right: .5rem; cursor: pointer; }
+  button:hover { background: #3b4252; }
+  #status { color: #a3be8c; margin-left: .5rem; }
+  .halted { color: #bf616a; font-weight: bold; }
+  #error { display: none; background: #3b1f22; border: 1px solid #bf616a;
+           color: #ebcb8b; border-radius: 6px; padding: .8rem 1rem;
+           margin: 1rem 0; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>gozilog <small>— cycle-accurate Z80, compiled to WebAssembly, running
+<code>examples/hello_from_z80.asm</code></small></h1>
+
+<p>
+  <button id="reset">Reset</button>
+  <button id="step">Step</button>
+  <button id="run">Run to HALT</button>
+  <span id="status">loading…</span>
+</p>
+
+<div id="error"></div>
+
+<div class="panels">
+  <fieldset><legend>Registers</legend><table id="regs"></table></fieldset>
+  <fieldset><legend>Memory</legend><pre id="mem"></pre></fieldset>
+</div>
+
+<script src="wasm_exec.js"></script>
+<script>
+const ORG = 0x8000, MSG = 0x9000;
+let program = null;
+
+const hex = (v, w) => v.toString(16).toUpperCase().padStart(w, "0");
+
+function flags(f) {
+  return [..."SZYHXPNC"].map((ch, i) => (f & (0x80 >> i)) ? ch : "·").join("");
+}
+
+function redraw() {
+  const s = z80State();
+  const rows = [
+    ["AF", hex(s.af,4)], ["BC", hex(s.bc,4)], ["DE", hex(s.de,4)], ["HL", hex(s.hl,4)],
+    ["IX", hex(s.ix,4)], ["IY", hex(s.iy,4)], ["SP", hex(s.sp,4)], ["PC", hex(s.pc,4)],
+    ["WZ", hex(s.wz,4)], ["I / R", hex(s.i,2) + " / " + hex(s.r,2)],
+    ["F", flags(s.af & 0xff)],
+    ["IM · IFF", s.im + " · " + (s.iff1?1:0) + (s.iff2?1:0)],
+    ["T-states", s.tstates],
+  ];
+  document.getElementById("regs").innerHTML =
+    rows.map(([k, v]) => `<tr><td>${k}</td><td class="v">${v}</td></tr>`).join("");
+
+  let out = "";
+  for (const base of [ORG, MSG]) {
+    for (let row = 0; row < 2; row++) {
+      const a = base + row * 16, bytes = z80Mem(a, 16);
+      out += hex(a,4) + "  ";
+      for (let i = 0; i < 16; i++) {
+        const cell = hex(bytes[i],2);
+        out += (a + i === s.pc) ? `<span class="pc">${cell}</span> ` : cell + " ";
+      }
+      out += " " + [...bytes].map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : ".").join("") + "\n";
+    }
+    out += "\n";
+  }
+  document.getElementById("mem").innerHTML = out;
+
+  document.getElementById("status").innerHTML =
+    s.halted ? '<span class="halted">HALTED</span>' : "running";
+}
+
+function reset() { z80Load(program, ORG, ORG); redraw(); }
+
+// --- startup error reporting -------------------------------------------
+// Anything that goes wrong while booting the WASM module lands in the
+// #error banner instead of only in the devtools console.
+
+function fail(msg, err) {
+  const box = document.getElementById("error");
+  box.textContent = "⚠ " + msg + (err ? "\n\n" + err : "");
+  box.style.display = "block";
+  document.getElementById("status").innerHTML = '<span class="halted">failed</span>';
+  console.error(msg, err ?? "");
+}
+
+// Opening index.html straight from disk can never work: browsers refuse
+// fetch() from file:// origins (the CORS error you'd see in the console).
+if (location.protocol === "file:") {
+  fail("This page must be served over HTTP — fetch() is blocked on file:// pages, " +
+       "so main.wasm and hello.bin cannot load.\n\n" +
+       "From examples/wasm run:\n    bash build.sh\n    go run ./serve\n" +
+       "then open http://localhost:8080");
+}
+
+// Watchdog: if the WASM module hasn't announced itself shortly after
+// load, something failed silently (bad MIME type, missing build.sh
+// artifacts, stale wasm_exec.js from a different Go version, …).
+const watchdog = setTimeout(() => {
+  fail("The emulator did not start within 10 s. Did build.sh run? " +
+       "Are main.wasm, hello.bin and wasm_exec.js present next to index.html, " +
+       "and does wasm_exec.js come from the same Go version that built main.wasm?");
+}, 10_000);
+
+async function fetchOrFail(name) {
+  const resp = await fetch(name);
+  if (!resp.ok) throw new Error(`fetch ${name}: HTTP ${resp.status} ${resp.statusText}`);
+  return resp;
+}
+
+addEventListener("z80ready", async () => {
+  clearTimeout(watchdog);
+  try {
+    program = new Uint8Array(await (await fetchOrFail("hello.bin")).arrayBuffer());
+  } catch (err) {
+    fail("The emulator started, but the example program failed to load. " +
+         "Run examples/wasm/build.sh to assemble hello.bin.", err);
+    return;
+  }
+  document.getElementById("reset").onclick = reset;
+  document.getElementById("step").onclick = () => { z80Step(); redraw(); };
+  document.getElementById("run").onclick = () => { z80Run(1_000_000); redraw(); };
+  reset();
+});
+
+async function boot() {
+  if (location.protocol === "file:") return; // already reported above
+  const go = new Go();
+  let result;
+  try {
+    result = await WebAssembly.instantiateStreaming(fetchOrFail("main.wasm"), go.importObject);
+  } catch (err) {
+    // instantiateStreaming requires the application/wasm MIME type;
+    // some servers don't send it. Retry from an ArrayBuffer before
+    // declaring failure.
+    try {
+      const bytes = await (await fetchOrFail("main.wasm")).arrayBuffer();
+      result = await WebAssembly.instantiate(bytes, go.importObject);
+    } catch (err2) {
+      clearTimeout(watchdog);
+      fail("Failed to load main.wasm. Run examples/wasm/build.sh, then serve " +
+           "this directory over HTTP (go run ./serve).", err2);
+      return;
+    }
+  }
+  go.run(result.instance); // resolves only if the Go program exits
+}
+boot();
+</script>
+</body>
+</html>

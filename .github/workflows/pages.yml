@@ -1,0 +1,59 @@
+# Build the WebAssembly demo and publish it to GitHub Pages.
+#
+# The demo's build artifacts (main.wasm, wasm_exec.js, hello.bin) are
+# deliberately never committed — wasm_exec.js must come from the exact
+# Go version that compiled the wasm — so Pages gets them from a fresh
+# build of examples/wasm/build.sh on every push to master.
+#
+# One-time repo setup: Settings → Pages → Source: "GitHub Actions".
+
+name: Deploy WASM demo to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+
+      - name: Install pasmo
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pasmo
+
+      - name: Build demo (assemble example, copy wasm_exec.js, compile WASM)
+        run: bash examples/wasm/build.sh
+
+      - name: Smoke-test the demo headlessly (Node drives the wasm API)
+        run: node examples/wasm/check.js
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: examples/wasm
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

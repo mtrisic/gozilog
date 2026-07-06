@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "pasmo: assemble hello_from_z80",
+      "type": "shell",
+      "command": "mkdir -p build && pasmo examples/hello_from_z80.asm build/hello_from_z80.bin",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "go: test all",
+      "type": "shell",
+      "command": "go test ./... && (cd cmd && go test ./...)",
+      "group": "test",
+      "problemMatcher": ["$go"]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "zrun: assemble + run hello_from_z80",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/zrun",
+      "cwd": "${workspaceFolder}",
+      "args": ["-org", "0x8000", "build/hello_from_z80.bin"],
+      "preLaunchTask": "pasmo: assemble hello_from_z80"
+    },
+    {
+      "name": "zstep: assemble + step through hello_from_z80 (TUI)",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/zstep",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "args": ["-org", "0x8000", "build/hello_from_z80.bin"],
+      "preLaunchTask": "pasmo: assemble hello_from_z80"
+    },
+    {
+      "name": "go: debug library tests",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${workspaceFolder}/z80"
+    }
+  ]
+}
