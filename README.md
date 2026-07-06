@@ -123,8 +123,8 @@ exposed via syscall/js) — the seed of a browser-based machine emulator.
 Only `cmd/zstep` stays native-only (it needs a real terminal).
 
 The demo also deploys automatically to GitHub Pages on every push to
-`master` (`.github/workflows/pages.yml` — one-time setup: repo Settings →
-Pages → Source: "GitHub Actions"). The page must be served over HTTP;
+`master` (`.github/workflows/pages.yml`; the workflow enables the Pages
+site itself on first run). The page must be served over HTTP;
 opening `index.html` from disk is blocked by browsers, and the page
 says so if you try.
 
