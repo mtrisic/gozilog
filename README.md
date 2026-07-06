@@ -13,14 +13,13 @@ enough to power machines that use the CPU itself for video generation
 the emulator compiled to WebAssembly, stepping through the example
 program with live registers and memory.
 
-**Status: complete (Phases 1–4).** Every documented and undocumented
-opcode implemented; all 1604
+**The project is complete.** Every documented and undocumented opcode
+implemented; all 1604
 [SingleStepTests](https://github.com/SingleStepTests/z80) files pass
 with full per-T-state cycle-trace assertions (address/data bus and
 control pins at every T-state); ZEXDOC and ZEXALL report all CRCs OK.
-See
-[SPEC.md](SPEC.md) for the design and phase plan, [AGENTS.md](AGENTS.md)
-for how to build, test and continue development.
+See [SPEC.md](SPEC.md) for the design, and [AGENTS.md](AGENTS.md) for
+how to build, test and continue development — if AI is your cup of tea.
 
 ## Quickstart
 
@@ -133,6 +132,19 @@ this README rendered as the homepage, the demo under `/demo/`; the
 workflow enables the Pages site itself on first run). The demo page
 must be served over HTTP; opening `index.html` from disk is blocked by
 browsers, and the page says so if you try.
+
+## Contributing
+
+Contributions are welcome — **human and AI alike**. The repo is built
+for both: [AGENTS.md](AGENTS.md) gives any contributor (carbon- or
+silicon-based) the working rules, the test suites make correctness
+non-negotiable, and the devcontainer means there is exactly one
+"works on my machine". Open an issue or a PR.
+
+If gozilog is useful to you, **star** it so others can find it — and a
+**fork** is how the next machine emulator gets born. If you build
+something on top of it (a Galaksija? a Spectrum? something stranger?),
+please do tell.
 
 ## License
 
