@@ -9,6 +9,10 @@ dependencies, machine-agnostic, with per-T-state timing hooks precise
 enough to power machines that use the CPU itself for video generation
 (Galaksija, ZX80/81) or contended memory (ZX Spectrum).
 
+**▶ [Try it in your browser](https://mtrisic.github.io/gozilog/demo/)** —
+the emulator compiled to WebAssembly, stepping through the example
+program with live registers and memory.
+
 **Status: complete (Phases 1–4).** Every documented and undocumented
 opcode implemented; all 1604
 [SingleStepTests](https://github.com/SingleStepTests/z80) files pass
@@ -109,7 +113,8 @@ Node (`js`), a cross-architecture determinism proof (the wasm-compiled
 `zrun` reproduces the committed golden RAM dump), and a headless check
 of the browser demo.
 
-Try the emulator in a browser:
+The browser demo is hosted at
+**<https://mtrisic.github.io/gozilog/demo/>** — or run it locally:
 
 ```sh
 cd examples/wasm
@@ -122,11 +127,12 @@ registers and memory (`z80Load`/`z80Step`/`z80Run`/`z80State`/`z80Mem`
 exposed via syscall/js) — the seed of a browser-based machine emulator.
 Only `cmd/zstep` stays native-only (it needs a real terminal).
 
-The demo also deploys automatically to GitHub Pages on every push to
-`master` (`.github/workflows/pages.yml`; the workflow enables the Pages
-site itself on first run). The page must be served over HTTP;
-opening `index.html` from disk is blocked by browsers, and the page
-says so if you try.
+The project site deploys automatically to GitHub Pages on every push
+to `master` (`.github/workflows/pages.yml` + `tools/build-site.sh`:
+this README rendered as the homepage, the demo under `/demo/`; the
+workflow enables the Pages site itself on first run). The demo page
+must be served over HTTP; opening `index.html` from disk is blocked by
+browsers, and the page says so if you try.
 
 ## License
 

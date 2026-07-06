@@ -43,6 +43,11 @@ jobs:
       - name: Smoke-test the demo headlessly (Node drives the wasm API)
         run: node examples/wasm/check.js
 
+      - name: Assemble site (README homepage, demo under /demo/)
+        run: bash tools/build-site.sh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - uses: actions/configure-pages@v5
         with:
           # Create/enable the Pages site (source: GitHub Actions) if the
@@ -52,7 +57,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: examples/wasm
+          path: site
 
   deploy:
     needs: build

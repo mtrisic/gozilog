@@ -12,6 +12,9 @@
 /examples/wasm/main.wasm
 /examples/wasm/wasm_exec.js
 
+# Pages site assembled by tools/build-site.sh
+/site/
+
 # Editor/OS noise (launch.json/tasks.json are committed; settings.json
 # is personal editor state)
 .vscode/settings.json
