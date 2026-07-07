@@ -1,0 +1,80 @@
+# Build, verify and publish the npm package (bindings/npm) on version
+# tags. The shipped gozilog.wasm is built with TinyGo (~8x smaller than
+# the Go toolchain build) and must be differentially identical to the
+# reference Go build across the randomized corpus before it can ship.
+#
+# One-time setup: create an npm automation token (npmjs.com → Access
+# Tokens → Granular, publish rights for "gozilog") and add it as the
+# repository secret NPM_TOKEN. Without the secret the workflow still
+# runs the build + verification and skips the publish step.
+
+name: Publish npm package
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # npm provenance attestation
+
+env:
+  TINYGO_VERSION: 0.41.1
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install TinyGo
+        run: |
+          curl -fsSL -o /tmp/tinygo.deb \
+            "https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo_${TINYGO_VERSION}_amd64.deb"
+          sudo dpkg -i /tmp/tinygo.deb
+
+      - name: Build (TinyGo, the shipped binary)
+        run: bash bindings/npm/build.sh
+
+      - name: Functional tests against the shipped binary
+        run: node bindings/npm/test.js
+
+      - name: Differential verification vs the reference Go build
+        run: |
+          cd bindings/npm
+          node difftest.js wasm_exec.js gozilog.wasm > /tmp/tinygo.json
+          TOOLCHAIN=go bash build.sh
+          node difftest.js wasm_exec.js gozilog.wasm > /tmp/go.json
+          diff /tmp/go.json /tmp/tinygo.json
+          echo "differential: TinyGo and Go builds identical"
+          # Rebuild the TinyGo artifact that actually ships.
+          bash build.sh
+
+      - name: Check package version matches the tag
+        if: github.ref_type == 'tag'
+        run: |
+          pkg=$(node -p "require('./bindings/npm/package.json').version")
+          tag="${GITHUB_REF_NAME#v}"
+          test "$pkg" = "$tag" || {
+            echo "package.json version ($pkg) != tag ($tag)"; exit 1; }
+
+      - name: Publish to npm (with provenance)
+        if: ${{ secrets.NPM_TOKEN != '' }}
+        run: npm publish --access public --provenance
+        working-directory: bindings/npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish skipped (no NPM_TOKEN secret)
+        if: ${{ secrets.NPM_TOKEN == '' }}
+        run: echo "::notice::NPM_TOKEN secret not configured — build verified, publish skipped."

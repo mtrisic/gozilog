@@ -4,6 +4,10 @@
 
 # gozilog
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/mtrisic/gozilog/z80.svg)](https://pkg.go.dev/github.com/mtrisic/gozilog/z80)
+[![npm](https://img.shields.io/npm/v/gozilog)](https://www.npmjs.com/package/gozilog)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A cycle-accurate Zilog Z80 CPU emulator library in Go. Zero
 dependencies, machine-agnostic, with per-T-state timing hooks precise
 enough to power machines that use the CPU itself for video generation
@@ -20,6 +24,20 @@ with full per-T-state cycle-trace assertions (address/data bus and
 control pins at every T-state); ZEXDOC and ZEXALL report all CRCs OK.
 See [SPEC.md](SPEC.md) for the design, and [AGENTS.md](AGENTS.md) for
 how to build, test and continue development — if AI is your cup of tea.
+
+## Install
+
+```sh
+go get github.com/mtrisic/gozilog                      # the library
+go install github.com/mtrisic/gozilog/cmd/zrun@latest  # headless runner
+go install github.com/mtrisic/gozilog/cmd/zstep@latest # TUI stepper
+npm install gozilog                                    # JS/WASM binding (~120 KB gzipped)
+```
+
+The npm package ([`gozilog`](https://www.npmjs.com/package/gozilog),
+see [bindings/npm](bindings/npm)) wraps the emulator compiled to
+WebAssembly with TinyGo and is differentially verified against the
+reference Go build on every release.
 
 ## Quickstart
 

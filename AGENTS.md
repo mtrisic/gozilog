@@ -34,6 +34,7 @@ Two Go modules tied by a `go.work` workspace:
 | `cmd/zstep` | bubbletea TUI stepper: registers + memory view, step/run/run-to-HALT |
 | `examples/` | `hello_from_z80.asm` (pasmo) + committed golden RAM dump |
 | `examples/wasm/` | browser demo module (syscall/js): the emulator compiled to WebAssembly with a step/run web UI |
+| `bindings/npm/` | the `gozilog` npm package: instance-based WASM binding (TinyGo build), ESM loader, TS types, tests |
 | `tools/check-wasm.sh` | the WASM gate: builds + test suites under wasmtime/Node + determinism + demo check |
 | `.devcontainer/` | the single supported dev environment (Go, pasmo, sjasmplus, wasmtime, Node, test-data download) |
 | `.vscode/` | F5 launch configs (zrun, zstep, library tests) + build tasks |
@@ -118,6 +119,14 @@ docker exec gozilog-dev-ct bash -c "cd /workspace && bash tools/check-wasm.sh"  
   build tags. `cmd/zstep` is exempt (needs a TTY); `wasm_exec.js` is
   copied from GOROOT at demo build time, never committed (it must match
   the compiling Go version).
+- The npm package ships a **TinyGo** build (~8x smaller); it must stay
+  differentially identical to the reference Go build
+  (`bindings/npm/difftest.js`, enforced by the npm release workflow).
+  Releases: tag `vX.Y.Z` (Go module + npm trigger); keep
+  `bindings/npm/package.json` version in lockstep with the tag. The
+  `cmd` module requires a *tagged* library version (no replace
+  directive) so `go install .../cmd/zrun@latest` works — bump it after
+  tagging.
 
 ## Discrepancy log
 

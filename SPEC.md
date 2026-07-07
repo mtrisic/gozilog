@@ -40,6 +40,13 @@ contended memory, must be implementable on the same API).
   `.devcontainer/post_create.sh` at a pinned commit into
   `z80/testdata/sst/` (gitignored); tests skip with an explicit message
   when it is absent.
+- Distribution: the Go module is consumed straight from GitHub
+  (proxy.golang.org caches it; pkg.go.dev documents it) — semver git
+  tags are the releases. A JS/WASM binding is published to npm as
+  `gozilog` from `bindings/npm`: TinyGo-compiled (331 KB vs 2.8 MB),
+  gated on a 2000-case differential test against the reference Go
+  build plus functional tests, published by CI with provenance on
+  version tags.
 - WebAssembly is an officially supported target (both `js/wasm` and
   `wasip1/wasm`; TinyGo not gated). The library needed zero changes —
   the guarantee is enforced by `tools/check-wasm.sh`: build checks, the

@@ -14,6 +14,7 @@ FROM mcr.microsoft.com/devcontainers/go:1.26-trixie
 
 ARG SJASMPLUS_VERSION=1.23.1
 ARG WASMTIME_VERSION=46.0.1
+ARG TINYGO_VERSION=0.41.1
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -25,6 +26,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         xz-utils \
     && rm -rf /var/lib/apt/lists/*
+
+# TinyGo (pinned release .deb) — used to build the small WASM binary
+# shipped in the npm package (bindings/npm).
+RUN arch="$(dpkg --print-architecture)" \
+    && curl -fsSL -o /tmp/tinygo.deb \
+        "https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo_${TINYGO_VERSION}_${arch}.deb" \
+    && dpkg -i /tmp/tinygo.deb \
+    && rm /tmp/tinygo.deb
 
 # wasmtime is not packaged in Debian; install the pinned release binary.
 RUN arch="$(dpkg --print-architecture)" \

@@ -15,6 +15,12 @@
 # Pages site assembled by tools/build-site.sh
 /site/
 
+# npm package build artifacts (bindings/npm/build.sh)
+/bindings/npm/gozilog.wasm
+/bindings/npm/wasm_exec.js
+/bindings/npm/node_modules/
+/bindings/npm/*.tgz
+
 # Editor/OS noise (launch.json/tasks.json are committed; settings.json
 # is personal editor state)
 .vscode/settings.json
