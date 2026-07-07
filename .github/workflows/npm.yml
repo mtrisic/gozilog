@@ -25,6 +25,8 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -69,12 +71,10 @@ jobs:
             echo "package.json version ($pkg) != tag ($tag)"; exit 1; }
 
       - name: Publish to npm (with provenance)
-        if: ${{ secrets.NPM_TOKEN != '' }}
+        if: env.NODE_AUTH_TOKEN != ''
         run: npm publish --access public --provenance
         working-directory: bindings/npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish skipped (no NPM_TOKEN secret)
-        if: ${{ secrets.NPM_TOKEN == '' }}
+        if: env.NODE_AUTH_TOKEN == ''
         run: echo "::notice::NPM_TOKEN secret not configured — build verified, publish skipped."
