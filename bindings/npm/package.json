@@ -1,6 +1,6 @@
 {
   "name": "gozilog",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Cycle-accurate Zilog Z80 CPU emulator compiled to WebAssembly — every documented and undocumented opcode, verified against SingleStepTests and ZEXALL",
   "type": "module",
   "main": "index.js",
