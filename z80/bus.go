@@ -77,6 +77,11 @@ const DataNone int16 = -1
 // that the datasheet lists as 7 T-states produces exactly 7 Tick calls
 // (plus any waits). SPEC.md documents the per-M-cycle schedule.
 //
+// Tick runs on the CPU's goroutine in the middle of [CPU.Step]. It may
+// call [CPU.SetINT] and [CPU.NMI] — that is how machines derive
+// interrupt timing from the T-state stream; see those methods for the
+// effect timing — but it must not re-enter [CPU.Step] or [CPU.Run].
+//
 // If the Bus does not implement Ticker, the CPU only advances its
 // internal T-state counter; there is no per-T-state overhead.
 type Ticker interface {

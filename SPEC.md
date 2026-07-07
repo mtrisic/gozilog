@@ -47,6 +47,18 @@ contended memory, must be implementable on the same API).
   gated on a 2000-case differential test against the reference Go
   build plus functional tests, published by CI with provenance on
   version tags.
+- Reentrancy guarantee (documented in the `SetINT`/`NMI`/`Ticker`
+  godoc, pinned by the `*FromTicker` tests in cpu_test.go): `SetINT`
+  and `NMI` may be called from inside a `Ticker.Tick` callback — that
+  is how machines derive interrupt timing from the T-state stream
+  (Galaksija, Spectrum frame interrupts). It holds by construction:
+  the /INT level and the NMI latch are plain fields written only by
+  their setters and sampled only at `Step`'s instruction-boundary
+  dispatch, and `Ticker.Tick` is invoked solely from the `tick`
+  micro-op between two such samples, on the same goroutine. A
+  mid-instruction change therefore takes effect at the next boundary
+  and never partially affects the executing instruction. Same-stack
+  reentrancy only — no thread-safety promise.
 - Disassembler: `z80/disasm` (v1.1.0) is a stdlib-only sibling package
   sharing no code with the CPU core — table-driven text templates and a
   single total `Decode` function: every byte sequence decodes to exactly

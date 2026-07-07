@@ -103,10 +103,26 @@ func (c *CPU) SpecialReset() {
 // level-triggered: it stays active until the machine clears it. The CPU
 // samples it at instruction boundaries (in [CPU.Step]) and accepts when
 // IFF1 is set and the previous instruction was not EI.
+//
+// SetINT may be called from within a [Ticker.Tick] callback — machines
+// that derive interrupt timing from the T-state stream (Galaksija's
+// CPU-driven video, ZX Spectrum frame interrupts) depend on this. A
+// change made mid-instruction never affects the instruction currently
+// executing: it becomes visible at the next instruction-boundary
+// sample, so asserting and deasserting the line within the same
+// instruction is a no-op. This is a reentrancy guarantee on the CPU's
+// single call stack, not thread safety — like every CPU method, SetINT
+// must be called from the same goroutine that drives Step.
 func (c *CPU) SetINT(active bool) { c.intLine = active }
 
 // NMI latches a non-maskable interrupt edge. The CPU accepts it at the
 // next instruction boundary regardless of IFF1, jumping to 0x0066.
+//
+// Like [CPU.SetINT], NMI may be called from within a [Ticker.Tick]
+// callback: an edge latched mid-instruction never affects the
+// instruction currently executing and is accepted exactly once, at the
+// next instruction boundary, where it takes priority over an asserted
+// /INT. Same-goroutine reentrancy only — not thread safety.
 func (c *CPU) NMI() { c.nmiPending = true }
 
 // Tstates returns the monotonic T-state counter: the total number of
