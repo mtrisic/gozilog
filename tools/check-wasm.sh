@@ -19,8 +19,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 WASM_EXEC_DIR="$(go env GOROOT)/lib/wasm"
 
 echo "==> Build checks"
-GOOS=js     GOARCH=wasm go build ./z80/          && echo "    z80 library  js/wasm     OK"
-GOOS=wasip1 GOARCH=wasm go build ./z80/          && echo "    z80 library  wasip1/wasm OK"
+GOOS=js     GOARCH=wasm go build ./z80/...          && echo "    z80 library  js/wasm     OK"
+GOOS=wasip1 GOARCH=wasm go build ./z80/...          && echo "    z80 library  wasip1/wasm OK"
 GOOS=js     GOARCH=wasm go build -o /dev/null ./cmd/zrun && echo "    cmd/zrun     js/wasm     OK"
 GOOS=wasip1 GOARCH=wasm go build -o /dev/null ./cmd/zrun && echo "    cmd/zrun     wasip1/wasm OK"
 
@@ -31,11 +31,11 @@ fi
 
 echo "==> Library tests under wasip1 (wasmtime; ~2 min)"
 GOOS=wasip1 GOARCH=wasm go test -short -count=1 \
-    -exec "$WASM_EXEC_DIR/go_wasip1_wasm_exec" ./z80/
+    -exec "$WASM_EXEC_DIR/go_wasip1_wasm_exec" ./z80/...
 
 echo "==> Library tests under js (Node; ~2 min)"
 GOOS=js GOARCH=wasm go test -short -count=1 \
-    -exec "$WASM_EXEC_DIR/go_js_wasm_exec" ./z80/
+    -exec "$WASM_EXEC_DIR/go_js_wasm_exec" ./z80/...
 
 echo "==> Cross-arch determinism: zrun.wasm under wasmtime vs golden dump"
 mkdir -p build
