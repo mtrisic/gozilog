@@ -229,3 +229,132 @@ func TestSnapshotRoundTripAndDeterminism(t *testing.T) {
 		t.Fatal("restored CPU diverged from original")
 	}
 }
+
+// hookBus is a testBus whose Ticker additionally invokes a callback at
+// chosen T-state indexes — the harness for the documented guarantee
+// that SetINT/NMI may be called from inside Tick.
+type hookBus struct {
+	testBus
+	n     int
+	hooks map[int]func()
+}
+
+func (b *hookBus) Tick(addr uint16, data int16, pins Pins) int {
+	w := b.testBus.Tick(addr, data, pins)
+	if fn := b.hooks[b.n]; fn != nil {
+		fn()
+	}
+	b.n++
+	return w
+}
+
+// newHookBus returns a hookBus with LD (0x9000),A — a 13T instruction
+// (M1 4T, two operand reads 3T each, write 3T) — at PC 0.
+func newHookBus() *hookBus {
+	b := &hookBus{hooks: map[int]func(){}}
+	b.mem[0] = 0x32 // LD (nn),A
+	b.mem[1] = 0x00
+	b.mem[2] = 0x90
+	return b
+}
+
+func TestSetINTFromTicker(t *testing.T) {
+	// A machine that raises /INT from inside Tick, mid-instruction
+	// (T-state 6 of the 13T LD (nn),A). The instruction in flight must
+	// complete untouched; acceptance happens on the next Step.
+	b := newHookBus()
+	c := New(b)
+	c.SetState(State{PC: 0, SP: 0x8000, IM: 1, IFF1: true, IFF2: true})
+	b.hooks[6] = func() { c.SetINT(true) }
+
+	if used := c.Step(); used != 13 {
+		t.Fatalf("LD (nn),A: used %d T-states, want 13 (INT must not preempt)", used)
+	}
+	if s := c.State(); s.PC != 3 {
+		t.Fatalf("after LD (nn),A: PC = %04x, want 0003", s.PC)
+	}
+	if used := c.Step(); used != 13 {
+		t.Fatalf("IM1 accept: used %d T-states, want 13", used)
+	}
+	if s := c.State(); s.PC != 0x0038 {
+		t.Fatalf("IM1 accept: PC = %04x, want 0038", s.PC)
+	}
+	if got := uint16(b.mem[0x7FFF])<<8 | uint16(b.mem[0x7FFE]); got != 3 {
+		t.Fatalf("IM1 accept: pushed %04x, want 0003", got)
+	}
+}
+
+func TestINTPulseWithinInstructionInvisible(t *testing.T) {
+	// Assert on T-state 5 and deassert on T-state 9 of the same
+	// instruction: the line is sampled at instruction boundaries only,
+	// so the pulse must never be accepted.
+	b := newHookBus()
+	c := New(b)
+	c.SetState(State{PC: 0, SP: 0x8000, IM: 1, IFF1: true, IFF2: true})
+	b.hooks[5] = func() { c.SetINT(true) }
+	b.hooks[9] = func() { c.SetINT(false) }
+
+	c.Step() // LD (nn),A, with the pulse inside
+	for i := 0; i < 2; i++ {
+		c.Step() // NOPs at 3, 4
+	}
+	if s := c.State(); s.PC != 5 {
+		t.Fatalf("PC = %04x, want 0005 (a within-instruction INT pulse was accepted)", s.PC)
+	}
+}
+
+func TestNMIFromTicker(t *testing.T) {
+	// NMI() from inside Tick mid-instruction, with /INT asserted at the
+	// same moment: the edge is accepted exactly once at the next
+	// boundary and wins over the maskable interrupt.
+	b := newHookBus()
+	c := New(b)
+	c.SetState(State{PC: 0, SP: 0x8000, IM: 1, IFF1: true, IFF2: true})
+	b.hooks[6] = func() { c.NMI(); c.SetINT(true) }
+
+	if used := c.Step(); used != 13 {
+		t.Fatalf("LD (nn),A: used %d T-states, want 13 (NMI must not preempt)", used)
+	}
+	if used := c.Step(); used != 11 {
+		t.Fatalf("NMI accept: used %d T-states, want 11", used)
+	}
+	s := c.State()
+	if s.PC != 0x0066 || s.IFF1 || !s.IFF2 {
+		t.Fatalf("NMI accept: PC=%04x IFF1=%v IFF2=%v, want 0066 false true", s.PC, s.IFF1, s.IFF2)
+	}
+	if got := uint16(b.mem[0x7FFF])<<8 | uint16(b.mem[0x7FFE]); got != 3 {
+		t.Fatalf("NMI accept: pushed %04x, want 0003", got)
+	}
+	c.Step() // NOP at 0x0066 — no second acceptance (IFF1 now clear)
+	if s := c.State(); s.PC != 0x0067 {
+		t.Fatalf("after NMI handler NOP: PC = %04x, want 0067 (edge accepted twice?)", s.PC)
+	}
+}
+
+func TestSetINTFromTickerWithWaits(t *testing.T) {
+	// The Ticker requests wait states on the very T-state where it
+	// raises /INT: the line change must survive the wait re-ticks
+	// unchanged — neither lost nor applied early.
+	b := newHookBus()
+	b.waits = map[int]int{6: 2}
+	c := New(b)
+	c.SetState(State{PC: 0, SP: 0x8000, IM: 1, IFF1: true, IFF2: true})
+	b.hooks[6] = func() { c.SetINT(true) }
+
+	if used := c.Step(); used != 15 {
+		t.Fatalf("LD (nn),A with 2 waits: used %d T-states, want 15", used)
+	}
+	if s := c.State(); s.PC != 3 {
+		t.Fatalf("after LD (nn),A: PC = %04x, want 0003", s.PC)
+	}
+	if used := c.Step(); used != 13 {
+		t.Fatalf("IM1 accept: used %d T-states, want 13", used)
+	}
+	if s := c.State(); s.PC != 0x0038 {
+		t.Fatalf("IM1 accept: PC = %04x, want 0038", s.PC)
+	}
+	c.Step() // NOP at 0x0038 — IFF1 cleared, no re-acceptance
+	if s := c.State(); s.PC != 0x0039 {
+		t.Fatalf("after handler NOP: PC = %04x, want 0039", s.PC)
+	}
+}
