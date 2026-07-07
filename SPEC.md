@@ -47,6 +47,17 @@ contended memory, must be implementable on the same API).
   gated on a 2000-case differential test against the reference Go
   build plus functional tests, published by CI with provenance on
   version tags.
+- Disassembler: `z80/disasm` (v1.1.0) is a stdlib-only sibling package
+  sharing no code with the CPU core — table-driven text templates and a
+  single total `Decode` function: every byte sequence decodes to exactly
+  one instruction with a correct length. Undefined ED opcodes decode as
+  the 2-byte placeholder `NOP* ED xx`; a redundant DD/FD prefix decodes
+  as the 1-byte placeholder `NONI* DD`/`NONI* FD` (matching the
+  silicon's NOP-that-defers-interrupts), so a stream walk always
+  advances. Verified three ways: an exhaustive decode sweep, a length
+  cross-check of every non-control-flow pattern against the
+  SST-verified CPU's PC advance, and a committed golden disassembly of
+  the complete opcode space.
 - WebAssembly is an officially supported target (both `js/wasm` and
   `wasip1/wasm`; TinyGo not gated). The library needed zero changes —
   the guarantee is enforced by `tools/check-wasm.sh`: build checks, the
@@ -185,6 +196,13 @@ discrepancies go in the AGENTS.md discrepancy log.
   for zrun and zstep, README quickstart, fresh-clone gate: clone →
   image build → post-create data download → all tests green → example
   golden dump reproduced → showcase builds.
+
+- **Post-1.0 — `z80/disasm` disassembler (v1.1.0): complete.**
+  Stdlib-only sibling package for debugger frontends; total decoding of
+  the full opcode space (incl. SLL, ED/IXY undocumented forms, DDCB
+  result-copy encodings, redundant-prefix placeholders). Gated by the
+  exhaustive sweep, the CPU length cross-check (2679 patterns), the
+  golden opcode matrix and the spot-check suite.
 
 ## References
 

@@ -29,6 +29,7 @@ Two Go modules tied by a `go.work` workspace:
 |---|---|
 | `go.mod` (root) | **the library module** `github.com/mtrisic/gozilog` — stdlib only, forever |
 | `z80/` | the library: `package z80` |
+| `z80/disasm/` | sibling `package disasm`: streaming disassembler for debugger frontends — every byte sequence decodes to exactly one instruction with a correct length |
 | `cmd/go.mod` | separate module for executables; carries the third-party deps |
 | `cmd/zrun` | headless runner: load a .bin, run to HALT, deterministic RAM dump |
 | `cmd/zstep` | bubbletea TUI stepper: registers + memory view, step/run/run-to-HALT |
@@ -51,6 +52,9 @@ Library source map:
 | `z80/opcodes_cb.go` | CB page (rotates/shifts, BIT/RES/SET) |
 | `z80/opcodes_ed.go` | ED page (I/O, 16-bit arithmetic, block ops incl. repeat-form flags) |
 | `z80/opcodes_index.go` | DD/FD index remapping, (IX+d) resolution, DDCB/FDCB |
+| `z80/disasm/disasm.go` | `Instr`, `Decode`, operand formatting; the placeholder and redundant-prefix conventions live in the package comment |
+| `z80/disasm/tables.go` | text templates: base/CB/ED pages, the DD/FD spaces incl. DDCB/FDCB |
+| `z80/disasm/*_test.go` | exhaustive sweep, length cross-check against the CPU core, golden opcode matrix (regen with `-update`), spot tests |
 | `z80/sst_test.go` | SingleStepTests harness (state + RAM + ports + cycle traces) |
 | `z80/zex_test.go` | ZEXDOC/ZEXALL under a CP/M stub (skipped with `-short`) |
 | `z80/cpu_test.go` | interrupts, HALT, ticker/wait contract, determinism, snapshot |

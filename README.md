@@ -89,6 +89,27 @@ The full embedder contract — including the timing model that lets a
 machine implement video generation and memory contention — is documented
 in the godoc of `z80.Bus`, `z80.Ticker` and in [SPEC.md](SPEC.md).
 
+### Disassembler
+
+The sibling package
+[`z80/disasm`](https://pkg.go.dev/github.com/mtrisic/gozilog/z80/disasm)
+turns machine code into mnemonic text for debugger frontends. It decodes
+*every* byte sequence — documented and undocumented opcodes, all prefix
+combinations — into exactly one instruction with a correct byte length,
+so a disassembly window pointed at arbitrary memory never panics, stalls
+or mis-frames what follows:
+
+```go
+import "github.com/mtrisic/gozilog/z80/disasm"
+
+ins := disasm.Decode(m.MemRead, cpu.State().PC)
+fmt.Printf("%04X  %s\n", ins.Addr, ins.Text) // e.g. "8003  LD A,(IX+05)"
+```
+
+Decoded lengths are verified instruction-by-instruction against the
+CPU core's own PC advance, and the disassembly of the complete opcode
+space is pinned by a committed golden file.
+
 ## Acknowledgements
 
 This emulator would not be verifiable without the work of the
