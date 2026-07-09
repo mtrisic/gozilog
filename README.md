@@ -17,6 +17,11 @@ enough to power machines that use the CPU itself for video generation
 the emulator compiled to WebAssembly, stepping through the example
 program with live registers and memory.
 
+**▶ [See it power a full machine](https://mtrisic.github.io/vremeplov/galaksija/)** —
+[vremeplov](https://github.com/mtrisic/vremeplov), a Galaksija emulator
+built on gozilog, running in the browser complete with a built-in
+monitor/debugger.
+
 **The project is complete.** Every documented and undocumented opcode
 implemented; all 1604
 [SingleStepTests](https://github.com/SingleStepTests/z80) files pass
